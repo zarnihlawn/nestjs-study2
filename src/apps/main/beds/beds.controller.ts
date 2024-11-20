@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   Patch,
@@ -14,6 +15,7 @@ import { CreateBedPayloadPipe } from './pipes/create-bed-payload.pipe';
 import { BedsGateway } from './beds.gateway';
 import { BedsAdminGateway } from './beds-admin.gateway';
 import {
+  CurrentUser,
   RegisterExternalPolicy,
   RegisterRule,
 } from 'src/guards/policy/decorator/policy.decorator';
@@ -22,6 +24,11 @@ import {
   ReadBedsRule,
   WriteBedsRule,
 } from './policy/beds-external.policy';
+import { User } from '../users/entities/user.entity';
+import { BedInternalPolicy } from './policy/beds-internal.policy';
+import { ForbiddenError } from '@casl/ability';
+import { CaslActionsEnum } from 'src/resources/enums/casl-actions.enum';
+import { Bed } from './entities/bed.entity';
 
 @Controller('beds')
 @RegisterExternalPolicy(BuildExternalPolicyFactory)
@@ -30,6 +37,7 @@ export class BedsController {
     private bedsAdminGateway: BedsAdminGateway,
     private bedsGateway: BedsGateway,
     private bedsService: BedsService,
+    private bedInternalPolicy: BedInternalPolicy,
   ) {
     // bed request from client
     this.bedsGateway.bedRequestSub.asObservable().subscribe({
@@ -51,9 +59,19 @@ export class BedsController {
   }
 
   @Post()
-  @RegisterRule(WriteBedsRule)
-  create(@Body(CreateBedPayloadPipe) createBedDto: CreateBedDto) {
-    return this.bedsService.create(createBedDto);
+  // @RegisterRule(WriteBedsRule)
+  create(
+    @Body(CreateBedPayloadPipe) createBedDto: CreateBedDto,
+    @CurrentUser() user: User,
+  ) {
+    const ability = this.bedInternalPolicy.definePolicy(user, createBedDto);
+
+    try {
+      ForbiddenError.from(ability).throwUnlessCan(CaslActionsEnum.WRITE, Bed);
+      return this.bedsService.create(createBedDto);
+    } catch (error) {
+      throw new ForbiddenException(error);
+    }
   }
 
   @Get()

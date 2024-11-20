@@ -10,7 +10,12 @@ import { User } from './entities/user.entity';
 export class UsersService {
   constructor(
     @InjectRepository(User) private userRepository: Repository<User>,
-  ) {}
+  ) {
+    // this.create({
+    //   username: 'zarni',
+    //   password: '123',
+    // });
+  }
 
   async create(createUserDto: CreateUserDto) {
     const item = this.userRepository.create(createUserDto);

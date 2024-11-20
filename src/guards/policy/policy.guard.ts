@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -31,13 +32,18 @@ export class PolicyGuard implements CanActivate {
       return true;
     }
 
+    // is there user
+    if (!req.user) {
+      throw new UnauthorizedException(`No user`);
+    }
+
     // is user valid
-    if (!req.user?.active) {
+    if (!req.user.active) {
       throw new UnauthorizedException(`User account is inactive`);
     }
 
     // is user account locked
-    if (req.user?.isLocked) {
+    if (req.user.isLocked) {
       throw new UnauthorizedException(`User account is locked`);
     }
 
@@ -83,17 +89,17 @@ export class PolicyGuard implements CanActivate {
         context.getHandler(),
       ) as RequiredRulesType<any, any, any>[];
 
-      rules.forEach((rule) => {
-        ForbiddenError.from(ability).throwUnlessCan(
-          rule.action,
-          rule.subject,
-          rule.fields,
-        );
-
-        // if (!ability.can(rule.action, rule.subject, rule.fields)) {
-        //   throw new UnauthorizedException(`You are not allowed`);
-        // }
-      });
+      try {
+        rules?.forEach((rule) => {
+          ForbiddenError.from(ability).throwUnlessCan(
+            rule.action,
+            rule.subject,
+            rule.fields,
+          );
+        });
+      } catch (error) {
+        throw new ForbiddenException(error);
+      }
     }
 
     return true;

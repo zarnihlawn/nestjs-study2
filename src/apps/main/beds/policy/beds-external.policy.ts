@@ -31,7 +31,8 @@ export function BuildExternalPolicyFactory(
   if (user?.isAdmin) {
     can(CaslActionsEnum.MANAGE, Bed);
   } else {
-    can(CaslActionsEnum.READ, Bed);
+    // can(CaslActionsEnum.READ, Bed);
+    cannot(CaslActionsEnum.READ, Bed).because(`You are not admin`);
   }
 
   return build();
