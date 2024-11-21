@@ -1,4 +1,4 @@
-import { Logger, Module } from '@nestjs/common';
+import { Logger, MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
@@ -23,6 +23,8 @@ import { SecondaryDatabaseModule } from './services/individual/databases/seconda
 import { AssignReqGuard } from './guards/assign-req/assign-req.guard';
 import { PolicyGuard } from './guards/policy/policy.guard';
 import { TokenPayloadType } from './apps/main/auth/auth.type';
+import { LoggerMiddleware } from './middlewares/logger/logger.middleware';
+import { MongodbService } from './services/individual/mongodb/mongodb.service';
 
 declare global {
   namespace Express {
@@ -66,6 +68,12 @@ declare global {
     Logger,
 
     { provide: APP_GUARD, useClass: AppGuard },
+
+    MongodbService,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(LoggerMiddleware).forRoutes('*');
+  }
+}
